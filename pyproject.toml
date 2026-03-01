@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mirai-agent"
+version = "0.1.0"
+description = "A universal AI Agent framework"
+dependencies = [
+    "streamlit",
+    "htbuilder",
+    "ollama",
+]
+
+[project.scripts]
+mirai = "mirai.cli:main"
