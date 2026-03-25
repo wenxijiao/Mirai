@@ -3,8 +3,10 @@ pyproject.toml
 mirai/__init__.py
 mirai/cli.py
 mirai/core/chatbot.py
+mirai/core/memories/memory.py
 mirai/tools/__init__.py
 mirai/ui/app.py
+mirai/utils/prompts.py
 mirai_agent.egg-info/PKG-INFO
 mirai_agent.egg-info/SOURCES.txt
 mirai_agent.egg-info/dependency_links.txt

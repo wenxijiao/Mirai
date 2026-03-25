@@ -1,42 +1,64 @@
-# mirai/cli.py
 import argparse
+import subprocess
+import urllib.request
+import urllib.error
+import sys
 import os
 
-# 这里的导入路径变成了从 mirai 包绝对导入
-# from mirai.backend.agent_core import TOOL_REGISTRY
+SERVER_URL = "http://127.0.0.1:8000"
+
+
+def is_server_running(url=f"{SERVER_URL}/health"):
+    try:
+        with urllib.request.urlopen(url) as response:
+            return response.status == 200
+    except urllib.error.URLError:
+        return False
 
 def main():
-    parser = argparse.ArgumentParser(description="Mirai Agent 命令行控制台")
-    
-    # 定义带 -- 的参数，action="store_true" 的意思是只要敲了这个参数，它的值就是 True
-    parser.add_argument("--ui", action="store_true", help="启动 Streamlit 网页端 UI")
-    parser.add_argument("--update", action="store_true", help="扫描并更新插件注册表")
-    parser.add_argument("--chat", action="store_true", help="在终端开启对话")
+    parser = argparse.ArgumentParser(description="Mirai Agent Command Line Interface")
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--server", action="store_true", help="Run the Mirai backend API server")
+    group.add_argument("--ui", action="store_true", help="Open Streamlit Web UI")
+    parser.add_argument("--update", action="store_true", help="Scan and update plugin registry")
+    group.add_argument("--chat", action="store_true", help="Start chat in terminal")
 
     args = parser.parse_args()
+    base_dir = os.path.dirname(os.path.abspath(__file__))
 
-    if args.ui:
-        print("🚀 正在启动 Streamlit Web UI...")
-        # 获取当前文件所在目录，推导出 web_ui.py 的绝对路径，防止在别的文件夹下运行报错
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        ui_path = os.path.join(base_dir, "frontend", "web_ui.py")
-        os.system(f"streamlit run {ui_path}")
-        
-    elif args.update:
-        print("🔄 正在扫描并更新插件索引...")
-        print("✅ 更新完成！")
-        
-    elif args.chat:
-        print("🤖 Mirai 终端对话已启动！(输入 'exit' 退出)")
-        while True:
-            user_input = input("你: ")
-            if user_input.lower() in ['exit', 'quit']:
-                break
-            print(f"Mirai: 收到 -> {user_input}")
+    try:
+        if args.server:
+            api_path = os.path.join(base_dir, "core", "api.py")
+            subprocess.run([sys.executable, api_path])
+            return
+
+        if args.ui:
+            if not is_server_running():
+                print("Mirai server is not running. Please start it with `mirai --server`.")
+                sys.exit(1)
+
+            print("Launching Streamlit Web UI...")
+            ui_path = os.path.join(base_dir, "ui", "app.py")
+            subprocess.run([sys.executable, "-m", "streamlit", "run", ui_path])
             
-    else:
-        # 如果什么参数都没带，就打印帮助信息
-        parser.print_help()
+        elif args.update:
+            print("Scanning and updating plugin registry...")
+            print("Update completed!")
+            
+        elif args.chat:
+            if not is_server_running():
+                print("Mirai server is not running. Please start it with `mirai --server`.")
+                sys.exit(1)
+
+            chat_path = os.path.join(base_dir, "utils", "chat.py")
+            subprocess.run([sys.executable, chat_path])
+                
+        else:
+            parser.print_help()
+
+    except KeyboardInterrupt:
+        print("\n👋 Quiting Mirai and Cleaning Process...")
 
 if __name__ == "__main__":
     main()

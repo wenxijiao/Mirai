@@ -4,3 +4,4 @@ Version: 0.1.0
 Summary: A universal AI Agent framework
 Requires-Dist: streamlit
 Requires-Dist: htbuilder
+Requires-Dist: ollama
