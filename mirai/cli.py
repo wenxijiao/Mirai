@@ -5,8 +5,8 @@ import urllib.error
 import sys
 import os
 
-SERVER_URL = "http://127.0.0.1:8000"
 
+SERVER_URL = "http://127.0.0.1:8000"
 
 def is_server_running(url=f"{SERVER_URL}/health"):
     try:
@@ -21,8 +21,8 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--server", action="store_true", help="Run the Mirai backend API server")
     group.add_argument("--ui", action="store_true", help="Open Streamlit Web UI")
-    parser.add_argument("--update", action="store_true", help="Scan and update plugin registry")
     group.add_argument("--chat", action="store_true", help="Start chat in terminal")
+    group.add_argument("--edge", action="store_true", help="Start Mirai Edge client")
 
     args = parser.parse_args()
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -42,10 +42,6 @@ def main():
             ui_path = os.path.join(base_dir, "ui", "app.py")
             subprocess.run([sys.executable, "-m", "streamlit", "run", ui_path])
             
-        elif args.update:
-            print("Scanning and updating plugin registry...")
-            print("Update completed!")
-            
         elif args.chat:
             if not is_server_running():
                 print("Mirai server is not running. Please start it with `mirai --server`.")
@@ -54,6 +50,13 @@ def main():
             chat_path = os.path.join(base_dir, "utils", "chat.py")
             subprocess.run([sys.executable, chat_path])
                 
+        elif args.edge:
+            # if not is_server_running():
+            #     print("Mirai server is not running. Please start it with `mirai --server`.")
+            #     sys.exit(1)
+
+            edge_path = os.path.join(base_dir, "edge", "client.py")
+            subprocess.run([sys.executable, edge_path])
         else:
             parser.print_help()
 
