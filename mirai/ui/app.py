@@ -1,4 +1,5 @@
 # ui/app.py
+import json
 import os
 import streamlit as st
 import requests
@@ -12,6 +13,14 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "session_id" not in st.session_state:
     st.session_state.session_id = DEFAULT_SESSION_ID
+
+def render_tool_activity(placeholder, activities):
+    if not activities:
+        placeholder.empty()
+        return
+
+    content = "### Tool Activity\n" + "\n".join(f"- {item}" for item in activities)
+    placeholder.markdown(content)
 
 with st.sidebar:
     st.markdown("### Control Panel")
@@ -38,22 +47,43 @@ if prompt := st.chat_input("Say something to Mirai..."):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    def stream_parser():
+    with st.chat_message("assistant"):
+        tool_placeholder = st.empty()
+        response_placeholder = st.empty()
+        response_parts = []
+        tool_activities = []
+        had_error = False
+
         url = f"{SERVER_URL}/chat"
         payload = {
             "prompt": prompt,
             "session_id": st.session_state.session_id,
         }
-        
-        try:
-            with requests.post(url, json=payload, stream=True) as r:
-                r.raise_for_status()
-                for chunk in r.iter_content(chunk_size=None, decode_unicode=True):
-                    if chunk:
-                        yield chunk
-        except Exception as e:
-            yield f"[Backend Error] {e}"
 
-    with st.chat_message("assistant"):
-        response = st.write_stream(stream_parser())
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        try:
+            with requests.post(url, json=payload, stream=True) as response:
+                response.raise_for_status()
+
+                for line in response.iter_lines(decode_unicode=True):
+                    if not line:
+                        continue
+
+                    event = json.loads(line)
+                    event_type = event.get("type")
+
+                    if event_type == "text":
+                        response_parts.append(event.get("content", ""))
+                        response_placeholder.markdown("".join(response_parts))
+                    elif event_type == "tool_status":
+                        tool_activities.append(event.get("content", ""))
+                        render_tool_activity(tool_placeholder, tool_activities)
+                    elif event_type == "error":
+                        had_error = True
+                        tool_placeholder.error(event.get("content", "Unknown backend error."))
+        except (requests.RequestException, json.JSONDecodeError) as e:
+            had_error = True
+            tool_placeholder.error(f"Backend request failed: {e}")
+
+        response_text = "".join(response_parts)
+        if response_text and not had_error:
+            st.session_state.messages.append({"role": "assistant", "content": response_text})

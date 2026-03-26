@@ -40,30 +40,52 @@ class MiraiBot:
     async def warm_up(self):
         await self._set_model_keep_alive(self.model_name, -1)
 
-    async def chat_stream(self, prompt: str, session_id: str = "default"):
+    async def chat_stream(self, prompt: str = None, session_id: str = "default", tools: list = None, ephemeral_messages: list = None):
+        """
+        Core streaming chat flow with function-calling support.
+        - tools: tool schema list passed to the model
+        - ephemeral_messages: temporary context for tool calls and tool results
+        """
         memory = self._get_memory(session_id)
-        user_message_id = memory.add_message("user", prompt)
+        
+        if prompt:
+            user_message_id = memory.add_message("user", prompt)
+            
+        messages = memory.get_context()
+        
+        if ephemeral_messages:
+            messages.extend(ephemeral_messages)
+
         full_response = ""
 
         try:
-            messages = memory.get_context()
             stream = await ollama.AsyncClient().chat(
                 model=self.model_name,
                 messages=messages,
                 think=self.think,
+                tools=tools,
                 stream=True,
             )
             
             async for chunk in stream:
-                content = chunk['message']['content']
+                message = chunk.get('message', {})
+                
+                if 'tool_calls' in message and message['tool_calls']:
+                    yield {"type": "tool_call", "tool_calls": message['tool_calls']}
+                    return
+                    
+                content = message.get('content', '')
                 if content:
                     full_response += content
-                    yield content
-        except Exception:
-            memory.delete_message(user_message_id)
-            raise
+                    yield {"type": "text", "content": content}
+                    
+        except Exception as e:
+            if prompt:
+                memory.delete_message(user_message_id)
+            raise e
 
-        memory.add_message('assistant', full_response)
+        if full_response:
+            memory.add_message('assistant', full_response)
 
     def clear_memory(self, session_id: str = "default"):
         memory = self._get_memory(session_id)

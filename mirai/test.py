@@ -43,7 +43,13 @@
 #             break
 #         test_stream(user_input)
 
-from datetime import datetime
+# from datetime import datetime
 
-print(datetime.now().strftime("%Y-%m-%d %H:%M:%S %A"))
-print(datetime.now().strftime("%Y-%m-%d %H:%M:%S %A"))
+# print(datetime.now().strftime("%Y-%m-%d %H:%M:%S %A"))
+# print(datetime.now().strftime("%Y-%m-%d %H:%M:%S %A"))
+
+def test():
+    print("This is a test function for Mirai.")
+
+m = test()
+print(m)
