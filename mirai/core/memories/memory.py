@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from mirai.core.utils.assets_check import assets_check
 
 class Memory:
-    def __init__(self, session_id="default", system_prompt="你叫mirai，你是全世界最好的女朋友", storage_dir=None, max_recent=10):
+    def __init__(self, session_id="default", system_prompt="Your name is Mirai. You are the best girlfriend in the world.", storage_dir=None, max_recent=10):
         base_dir = os.path.dirname(os.path.abspath(__file__))
         self.db_dir = storage_dir if storage_dir else os.path.join(base_dir, ".lancedb")
         

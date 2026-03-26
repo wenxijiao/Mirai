@@ -1,17 +1,16 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from contextlib import asynccontextmanager
+from copy import deepcopy
 from mirai.core.chatbot import MiraiBot
+from mirai.core.chatbot import ChatRequest
 
-class ChatRequest(BaseModel):
-    prompt: str
-    session_id: str = "default"
-
-# bot = MiraiBot(model_name='sorc/qwen3.5-instruct-uncensored:latest', think=False)
 bot = MiraiBot(model_name='qwen3.5:0.8b', think=False)
+
+ACTIVE_CONNECTIONS = {}
+EDGE_TOOLS_REGISTRY = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,6 +28,51 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.websocket("/ws/edge")
+async def websocket_edge_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    edge_name = "Unknown"
+    
+    try:
+        # Receive the first message after connect for registration.
+        auth_msg = await websocket.receive_json()
+        if auth_msg.get("type") == "register":
+            edge_name = auth_msg.get("edge_name", "Unknown_Edge")
+            tools = auth_msg.get("tools", [])
+            previous_websocket = ACTIVE_CONNECTIONS.get(edge_name)
+
+            if previous_websocket is not None and previous_websocket is not websocket:
+                print(f"[System] Edge device [{edge_name}] reconnected. Replacing the old socket.")
+                await previous_websocket.close(code=1012, reason="Replaced by a newer connection")
+            
+            ACTIVE_CONNECTIONS[edge_name] = websocket
+            EDGE_TOOLS_REGISTRY[edge_name] = {}
+
+            # Prefix edge tool names to avoid cross-device collisions.
+            for tool_schema in tools:
+                original_name = tool_schema["function"]["name"]
+                prefixed_name = f"edge_{edge_name}__{original_name}"
+                
+                schema_copy = deepcopy(tool_schema)
+                schema_copy["function"]["name"] = prefixed_name
+                EDGE_TOOLS_REGISTRY[edge_name][prefixed_name] = schema_copy
+
+            print(f"[Edge Connected] Device [{edge_name}] is online with {len(tools)} mounted tools.")
+
+            # Keep the socket open and listen for follow-up messages.
+            while True:
+                data = await websocket.receive_json()
+                print(f"[Message from {edge_name}] {data}")
+                # TODO: Handle tool execution results and wake the waiting LLM flow.
+
+    except WebSocketDisconnect:
+        print(f"[Edge Disconnected] Device [{edge_name}] went offline.")
+        if ACTIVE_CONNECTIONS.get(edge_name) is websocket:
+            del ACTIVE_CONNECTIONS[edge_name]
+        if ACTIVE_CONNECTIONS.get(edge_name) is None and edge_name in EDGE_TOOLS_REGISTRY:
+            del EDGE_TOOLS_REGISTRY[edge_name]
+            print(f"[Cleanup] Cleared in-memory tool cache for [{edge_name}].")
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):

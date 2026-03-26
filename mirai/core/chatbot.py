@@ -1,7 +1,3 @@
-from contextlib import asynccontextmanager
-import uvicorn
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
 import ollama
 import asyncio
 from pydantic import BaseModel

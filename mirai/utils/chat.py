@@ -21,12 +21,12 @@ def chat_stream(prompt, session_id=DEFAULT_SESSION_ID):
             print("\n")
             
     except requests.exceptions.ConnectionError:
-        print("\n[错误] 连接不到大脑！请检查后端 AI 服务是否已启动加载完毕。\n")
+        print("\n[Error] Cannot connect to the server. Make sure the backend is running and ready.\n")
     except Exception as e:
-        print(f"\n[错误] 发生了点意外: {e}\n")
+        print(f"\n[Error] Something unexpected happened: {e}\n")
 
 if __name__ == "__main__":
-    print("🤖 Mirai 终端对话已启动！(输入 'exit' 或 'q' 退出)")
+    print("Mirai terminal chat started. Type 'exit' or 'q' to quit.")
     while True:
         user_input = input("You: ")
         if user_input.lower() in ['exit', 'quit', 'q']:

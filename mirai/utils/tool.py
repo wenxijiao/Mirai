@@ -7,7 +7,7 @@ TOOL_REGISTRY: Dict[str, Dict[str, Any]] = {}
 def mirai_tool(description: str = None):
     def decorator(func: Callable):
         name = func.__name__
-        doc = description or inspect.getdoc(func) or "未提供功能描述"
+        doc = description or inspect.getdoc(func) or "No description provided."
         
         sig = inspect.signature(func)
         properties = {}
@@ -17,7 +17,7 @@ def mirai_tool(description: str = None):
             required_params.append(param_name)
             
             if param.annotation == inspect.Parameter.empty:
-                print(f"⚠️ [Mirai Tool 警告] 工具 '{name}' 的参数 '{param_name}' 未标注类型，已默认设为 string。")
+                print(f"[Mirai Tool Warning] Parameter '{param_name}' in tool '{name}' has no type annotation. Defaulting to string.")
                 param_type = "string"
             else:
                 if param.annotation == int: param_type = "integer"
@@ -27,7 +27,7 @@ def mirai_tool(description: str = None):
                 
             properties[param_name] = {
                 "type": param_type,
-                "description": f"参数 {param_name}"
+                "description": f"Parameter: {param_name}"
             }
         
         schema = {

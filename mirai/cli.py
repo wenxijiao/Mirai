@@ -6,7 +6,7 @@ import sys
 import os
 
 
-SERVER_URL = "http://127.0.0.1:8000"
+SERVER_URL = os.getenv("MIRAI_SERVER_URL", "http://127.0.0.1:8000")
 
 def is_server_running(url=f"{SERVER_URL}/health"):
     try:
@@ -51,9 +51,9 @@ def main():
             subprocess.run([sys.executable, chat_path])
                 
         elif args.edge:
-            # if not is_server_running():
-            #     print("Mirai server is not running. Please start it with `mirai --server`.")
-            #     sys.exit(1)
+            if not is_server_running():
+                print("Mirai server is not running. Please start it with `mirai --server`.")
+                sys.exit(1)
 
             edge_path = os.path.join(base_dir, "edge", "client.py")
             subprocess.run([sys.executable, edge_path])
@@ -61,7 +61,7 @@ def main():
             parser.print_help()
 
     except KeyboardInterrupt:
-        print("\n👋 Quiting Mirai and Cleaning Process...")
+        print("\nShutting down Mirai.")
 
 if __name__ == "__main__":
     main()
